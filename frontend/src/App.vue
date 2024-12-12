@@ -1,56 +1,60 @@
 <template>
   <div class="app">
-    <header>
-      <h1>Project Gantt Chart</h1>
-      <button @click="showProjectForm = true" class="btn-primary">New Project</button>
-    </header>
+    <!-- Project List View -->
+    <div v-if="!selectedProject" class="projects-grid">
+      <header class="main-header">
+        <h1>Project Gantt Chart</h1>
+        <button @click="showProjectForm = true" class="btn-primary">New Project</button>
+      </header>
 
-    <div class="main-content">
-      <div class="projects-sidebar" v-if="projects.length > 0">
-        <h2>Projects</h2>
-        <div class="project-list">
-          <div
-            v-for="project in projects"
-            :key="project.id"
-            class="project-item"
-            :class="{ active: selectedProject?.id === project.id }"
-            @click="selectProject(project)"
-          >
-            <div class="project-info">
-              <h3>{{ project.name }}</h3>
-              <p>{{ project.description }}</p>
-              <small>Tasks: {{ project.tasks.length }}</small>
-            </div>
+      <div class="project-tiles">
+        <div
+          v-for="project in projects"
+          :key="project.id"
+          class="project-tile"
+          @click="selectProject(project)"
+        >
+          <h3>{{ project.name }}</h3>
+          <p>{{ project.description }}</p>
+          <div class="project-stats">
+            <span>Tasks: {{ project.tasks.length }}</span>
             <div class="project-actions">
-              <button @click.stop="editProject(project)" class="btn-icon">✏️</button>
-              <button @click.stop="deleteProject(project.id)" class="btn-icon">🗑️</button>
+              <button @click.stop="editProject(project)" class="btn-icon" title="Edit Project">✏️</button>
+              <button @click.stop="deleteProject(project.id)" class="btn-icon" title="Delete Project">🗑️</button>
             </div>
           </div>
+        </div>
+
+        <div v-if="projects.length === 0" class="empty-state">
+          <h2>Welcome to Project Gantt Chart</h2>
+          <p>Get started by creating your first project!</p>
+          <button @click="showProjectForm = true" class="btn-primary">Create Project</button>
         </div>
       </div>
+    </div>
 
-      <div class="content-area">
-        <div v-if="selectedProject" class="project-view">
+    <!-- Project Detail View with Gantt Chart -->
+    <div v-else class="project-detail-view">
+      <header class="detail-header">
+        <button @click="closeProject" class="btn-back">← Back to Projects</button>
+        <div class="project-title">
           <h2>{{ selectedProject.name }}</h2>
           <p>{{ selectedProject.description }}</p>
-          <GanttChart
-            v-if="selectedProject.tasks.length > 0"
-            :tasks="sortedTasks"
-            @update:tasks="updateProjectTasks"
-          />
-          <div v-else class="no-tasks">
-            <p>No tasks in this project yet.</p>
-            <button @click="editProject(selectedProject)" class="btn-primary">Add Tasks</button>
-          </div>
         </div>
-        <div v-else class="welcome-message">
-          <h2>Welcome to Project Gantt Chart</h2>
-          <p v-if="projects.length === 0">
-            Get started by creating your first project!
-          </p>
-          <p v-else>
-            Select a project from the sidebar to view its Gantt chart.
-          </p>
+        <div class="project-actions">
+          <button @click="editProject(selectedProject)" class="btn-primary">Edit Project</button>
+        </div>
+      </header>
+
+      <div class="gantt-container">
+        <GanttChart
+          v-if="selectedProject.tasks.length > 0"
+          :tasks="sortedTasks"
+          @update:tasks="updateProjectTasks"
+        />
+        <div v-else class="no-tasks">
+          <p>No tasks in this project yet.</p>
+          <button @click="editProject(selectedProject)" class="btn-primary">Add Tasks</button>
         </div>
       </div>
     </div>
@@ -154,6 +158,10 @@ function selectProject(project: Project) {
   selectedProject.value = project
 }
 
+function closeProject() {
+  selectedProject.value = null
+}
+
 function editProject(project: Project) {
   editingProject.value = project
   showProjectForm.value = true
@@ -178,71 +186,68 @@ async function updateProjectTasks(tasks: Task[]) {
 
 <style>
 .app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-header {
+.main-header {
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 20px;
-  min-height: calc(100vh - 100px);
-}
-
-.projects-sidebar {
-  background: #f5f5f5;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.project-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.project-item {
   background: white;
-  padding: 15px;
-  border-radius: 4px;
+  border-bottom: 1px solid #eee;
+}
+
+.projects-grid {
+  padding: 20px;
+}
+
+.project-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.project-tile {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 20px;
   cursor: pointer;
-  border: 1px solid #ddd;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.project-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.project-tile h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.project-tile p {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.project-stats {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-}
-
-.project-item.active {
-  border-color: #007bff;
-  box-shadow: 0 0 0 1px #007bff;
-}
-
-.project-info h3 {
-  margin: 0 0 5px 0;
-  font-size: 1.1em;
-}
-
-.project-info p {
-  margin: 0 0 5px 0;
-  font-size: 0.9em;
-  color: #666;
-}
-
-.project-info small {
+  align-items: center;
   color: #888;
+  font-size: 0.9em;
 }
 
 .project-actions {
   display: flex;
-  gap: 5px;
+  gap: 8px;
 }
 
 .btn-icon {
@@ -251,27 +256,70 @@ header {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
 }
 
 .btn-icon:hover {
+  opacity: 1;
   background: #f0f0f0;
 }
 
-.content-area {
-  background: white;
+.project-detail-view {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-header {
   padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  background: white;
+  border-bottom: 1px solid #eee;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 20px;
 }
 
-.welcome-message {
-  text-align: center;
-  padding: 40px;
+.btn-back {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 1em;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.no-tasks {
+.btn-back:hover {
+  color: #333;
+}
+
+.project-title {
+  margin: 0;
+}
+
+.project-title h2 {
+  margin: 0 0 5px 0;
+}
+
+.project-title p {
+  margin: 0;
+  color: #666;
+}
+
+.gantt-container {
+  flex: 1;
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.empty-state {
   text-align: center;
   padding: 40px;
+  grid-column: 1 / -1;
 }
 
 .modal {
@@ -303,23 +351,38 @@ header {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .btn-primary:hover {
   background: #0056b3;
 }
 
+.no-tasks {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  margin: 20px;
+}
+
 @media (max-width: 768px) {
-  .main-content {
+  .project-tiles {
     grid-template-columns: 1fr;
   }
   
-  .projects-sidebar {
-    order: 1;
+  .detail-header {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    text-align: center;
   }
   
-  .content-area {
-    order: 2;
+  .btn-back {
+    justify-content: center;
+  }
+  
+  .project-actions {
+    justify-content: center;
   }
 }
 </style>
