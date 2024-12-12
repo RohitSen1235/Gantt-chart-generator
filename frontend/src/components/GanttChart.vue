@@ -114,7 +114,7 @@ const calculateLeftMargin = (tasks: Task[]): number => {
   
   // Calculate width with some padding (40px for safety margin)
   const textWidth = calculateTextWidth(longestTask)
-  return Math.ceil(textWidth) + 40
+  return Math.max(Math.ceil(textWidth) + 40, 120) // Minimum margin of 120px
 }
 
 const drawChart = () => {
@@ -127,23 +127,34 @@ const drawChart = () => {
   const leftMargin = calculateLeftMargin(props.tasks)
   
   // Set up margins with dynamic left margin
-  const margin = { top: 60, right: 40, bottom: 40, left: leftMargin }
+  const margin = { 
+    top: 60, 
+    right: 20, 
+    bottom: 40, 
+    left: leftMargin 
+  }
+  
+  // Calculate container width
+  const containerWidth = chartContainer.value.clientWidth
+  
+  // Calculate dynamic width based on container size
+  const width = Math.max(containerWidth - margin.left - margin.right, 400)
   
   // Calculate time extent with padding
   const timeExtent = d3.extent(props.tasks.flatMap(d => [new Date(d.Start_date), new Date(d.End_Date)])) as [Date, Date]
   const timePadding = 7 * 24 * 60 * 60 * 1000 // 7 days padding
   const paddedStartDate = new Date(timeExtent[0].getTime() - timePadding)
   const paddedEndDate = new Date(timeExtent[1].getTime() + timePadding)
-  
-  // Fixed width for the chart content
-  const width = 800
-  const height = props.tasks.length * 40 // Fixed height per task
 
-  // Create SVG with fixed width
+  // Calculate dynamic height based on number of tasks
+  const minHeightPerTask = 30
+  const height = Math.max(props.tasks.length * minHeightPerTask, 200)
+
+  // Create responsive SVG
   const svg = d3.select(chartContainer.value)
     .append('svg')
-    .attr('width', width + margin.left + margin.right)
-    .attr('height', height + margin.top + margin.bottom)
+    .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr('preserveAspectRatio', 'xMinYMin meet')
     .append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`)
 
@@ -235,7 +246,7 @@ const drawChart = () => {
     .attr('rx', 3)
     .attr('ry', 3)
 
-  // Add responsibility labels
+  // Add responsibility labels with dynamic font size
   svg.selectAll('.responsibility')
     .data(props.tasks)
     .enter()
@@ -246,13 +257,23 @@ const drawChart = () => {
     .attr('dy', '0.35em')
     .text(d => d.Responsibility)
     .attr('fill', 'brown')
-    .attr('font-size', '12px')
+    .attr('font-size', `${Math.min(taskScale.bandwidth() * 0.4, 12)}px`)
+}
+
+// Debounce function for resize handling
+const debounce = (fn: Function, ms = 300) => {
+  let timeoutId: ReturnType<typeof setTimeout>
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), ms)
+  }
 }
 
 // Draw chart on mount and when tasks change
 onMounted(() => {
   drawChart()
-  window.addEventListener('resize', drawChart)
+  const debouncedDrawChart = debounce(drawChart)
+  window.addEventListener('resize', debouncedDrawChart)
 })
 
 watch(() => props.tasks, () => {
@@ -270,6 +291,7 @@ onUnmounted(() => {
   width: 100%;
   max-width: 100%;
   position: relative;
+  margin: 0 auto;
 }
 
 .gantt-chart {
@@ -285,6 +307,7 @@ onUnmounted(() => {
   scrollbar-color: #2196F3 #f0f0f0;
   /* Prevent content from expanding container */
   max-width: 100%;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 /* Custom scrollbar styling for webkit browsers */
@@ -310,6 +333,7 @@ onUnmounted(() => {
   margin-bottom: 1rem;
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .download-buttons button {
@@ -320,6 +344,7 @@ onUnmounted(() => {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-width: 120px;
 }
 
 .download-buttons button:hover {
@@ -360,5 +385,31 @@ onUnmounted(() => {
 
 :deep(.grid line) {
   stroke-dasharray: 2,2;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .download-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .download-buttons button {
+    width: 100%;
+  }
+
+  :deep(.x-axis text) {
+    font-size: 10px;
+  }
+
+  :deep(.y-axis text) {
+    font-size: 10px;
+  }
+}
+
+/* Ensure SVG is responsive */
+:deep(svg) {
+  width: 100%;
+  height: auto;
 }
 </style>
