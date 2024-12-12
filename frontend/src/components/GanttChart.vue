@@ -87,10 +87,13 @@ const downloadJPEG = () => {
 const generateTicks = (start: Date, end: Date): Date[] => {
   const ticks: Date[] = []
   const current = new Date(start)
+  // Ensure we start at the beginning of the week
+  current.setDate(current.getDate() - current.getDay())
+  
   while (current <= end) {
     ticks.push(new Date(current))
-    // Add 14 days
-    current.setDate(current.getDate() + 14)
+    // Add 7 days (one week)
+    current.setDate(current.getDate() + 7)
   }
   return ticks
 }
@@ -134,42 +137,43 @@ const drawChart = () => {
     left: leftMargin 
   }
   
-  // Calculate container width
-  const containerWidth = chartContainer.value.clientWidth
-  
-  // Calculate dynamic width based on container size
-  const width = Math.max(containerWidth - margin.left - margin.right, 400)
-  
   // Calculate time extent with padding
   const timeExtent = d3.extent(props.tasks.flatMap(d => [new Date(d.Start_date), new Date(d.End_Date)])) as [Date, Date]
-  const timePadding = 7 * 24 * 60 * 60 * 1000 // 7 days padding
-  const paddedStartDate = new Date(timeExtent[0].getTime() - timePadding)
-  const paddedEndDate = new Date(timeExtent[1].getTime() + timePadding)
-
+  const weekInMillis = 7 * 24 * 60 * 60 * 1000
+  const startDate = new Date(timeExtent[0].getTime() - weekInMillis)
+  const endDate = new Date(timeExtent[1].getTime() + weekInMillis)
+  
+  // Calculate the number of weeks between start and end
+  const totalWeeks = Math.ceil((endDate.getTime() - startDate.getTime()) / weekInMillis)
+  
+  // Set minimum width per week (in pixels)
+  const minWidthPerWeek = 100
+  const totalWidth = totalWeeks * minWidthPerWeek
+  
   // Calculate dynamic height based on number of tasks
   const minHeightPerTask = 40
   const height = Math.max(props.tasks.length * minHeightPerTask, 200)
 
-  // Create responsive SVG
+  // Create responsive SVG with fixed width based on weeks
   const svg = d3.select(chartContainer.value)
     .append('svg')
-    .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-    .attr('preserveAspectRatio', 'xMinYMin meet')
+    .attr('width', totalWidth + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
     .append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`)
 
   // Create scales
   const timeScale = d3.scaleTime()
-    .domain([paddedStartDate, paddedEndDate])
-    .range([0, width])
+    .domain([startDate, endDate])
+    .range([0, totalWidth])
 
   const taskScale = d3.scaleBand()
     .domain(props.tasks.map(d => d.Task))
     .range([0, height])
     .padding(0.2)
 
-  // Generate ticks for every two weeks
-  const ticks = generateTicks(paddedStartDate, paddedEndDate)
+  // Generate ticks for every week
+  const ticks = generateTicks(startDate, endDate)
 
   // Create axes with custom ticks
   const xAxis = d3.axisTop(timeScale)
@@ -407,9 +411,8 @@ onUnmounted(() => {
   }
 }
 
-/* Ensure SVG is responsive */
+/* Remove responsive SVG width to allow horizontal scrolling */
 :deep(svg) {
-  width: 100%;
   height: auto;
 }
 </style>
