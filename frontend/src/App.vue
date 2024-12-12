@@ -1,60 +1,62 @@
 <template>
   <div class="app">
-    <!-- Project List View -->
-    <div v-if="!selectedProject" class="projects-grid">
-      <header class="main-header">
-        <h1>Project Gantt Chart</h1>
-        <button @click="showProjectForm = true" class="btn-primary">New Project</button>
-      </header>
+    <div class="container">
+      <!-- Project List View -->
+      <div v-if="!selectedProject" class="projects-grid">
+        <header class="main-header">
+          <h1>Project Gantt Chart</h1>
+          <button @click="showProjectForm = true" class="btn-primary">New Project</button>
+        </header>
 
-      <div class="project-tiles">
-        <div
-          v-for="project in projects"
-          :key="project.id"
-          class="project-tile"
-          @click="selectProject(project)"
-        >
-          <h3>{{ project.name }}</h3>
-          <p>{{ project.description }}</p>
-          <div class="project-stats">
-            <span>Tasks: {{ project.tasks.length }}</span>
-            <div class="project-actions">
-              <button @click.stop="editProject(project)" class="btn-icon" title="Edit Project">✏️</button>
-              <button @click.stop="deleteProject(project.id)" class="btn-icon" title="Delete Project">🗑️</button>
+        <div class="project-tiles">
+          <div
+            v-for="project in projects"
+            :key="project.id"
+            class="project-tile"
+            @click="selectProject(project)"
+          >
+            <h3>{{ project.name }}</h3>
+            <p>{{ project.description }}</p>
+            <div class="project-stats">
+              <span>Tasks: {{ project.tasks.length }}</span>
+              <div class="project-actions">
+                <button @click.stop="editProject(project)" class="btn-icon" title="Edit Project">✏️</button>
+                <button @click.stop="deleteProject(project.id)" class="btn-icon" title="Delete Project">🗑️</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div v-if="projects.length === 0" class="empty-state">
-          <h2>Welcome to Project Gantt Chart</h2>
-          <p>Get started by creating your first project!</p>
-          <button @click="showProjectForm = true" class="btn-primary">Create Project</button>
+          <div v-if="projects.length === 0" class="empty-state">
+            <h2>Welcome to Project Gantt Chart</h2>
+            <p>Get started by creating your first project!</p>
+            <button @click="showProjectForm = true" class="btn-primary">Create Project</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Project Detail View with Gantt Chart -->
-    <div v-else class="project-detail-view">
-      <header class="detail-header">
-        <button @click="closeProject" class="btn-back">← Back to Projects</button>
-        <div class="project-title">
-          <h2>{{ selectedProject.name }}</h2>
-          <p>{{ selectedProject.description }}</p>
-        </div>
-        <div class="project-actions">
-          <button @click="editProject(selectedProject)" class="btn-primary">Edit Project</button>
-        </div>
-      </header>
+      <!-- Project Detail View with Gantt Chart -->
+      <div v-else class="project-detail-view">
+        <header class="detail-header">
+          <button @click="closeProject" class="btn-back">← Back to Projects</button>
+          <div class="project-title">
+            <h2>{{ selectedProject.name }}</h2>
+            <p>{{ selectedProject.description }}</p>
+          </div>
+          <div class="project-actions">
+            <button @click="editProject(selectedProject)" class="btn-primary">Edit Project</button>
+          </div>
+        </header>
 
-      <div class="gantt-container">
-        <GanttChart
-          v-if="selectedProject.tasks.length > 0"
-          :tasks="sortedTasks"
-          @update:tasks="updateProjectTasks"
-        />
-        <div v-else class="no-tasks">
-          <p>No tasks in this project yet.</p>
-          <button @click="editProject(selectedProject)" class="btn-primary">Add Tasks</button>
+        <div class="gantt-container">
+          <GanttChart
+            v-if="selectedProject.tasks.length > 0"
+            :tasks="sortedTasks"
+            @update:tasks="updateProjectTasks"
+          />
+          <div v-else class="no-tasks">
+            <p>No tasks in this project yet.</p>
+            <button @click="editProject(selectedProject)" class="btn-primary">Add Tasks</button>
+          </div>
         </div>
       </div>
     </div>
@@ -186,30 +188,32 @@ async function updateProjectTasks(tasks: Task[]) {
 
 <style>
 .app {
-  max-width: 100%;
   min-height: 100vh;
-  margin: 0;
-  padding: 0;
+  background: #f5f5f5;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
 }
 
 .main-header {
-  padding: 20px;
+  padding: 20px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
 }
 
 .projects-grid {
-  padding: 20px;
+  padding: 20px 0;
 }
 
 .project-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
-  padding: 20px;
 }
 
 .project-tile {
@@ -266,19 +270,24 @@ async function updateProjectTasks(tasks: Task[]) {
 }
 
 .project-detail-view {
-  min-height: 100vh;
+  min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin: 20px 0;
 }
 
 .detail-header {
   padding: 20px;
-  background: white;
   border-bottom: 1px solid #eee;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 20px;
+  background: white;
+  border-radius: 8px 8px 0 0;
 }
 
 .btn-back {
@@ -313,13 +322,16 @@ async function updateProjectTasks(tasks: Task[]) {
 .gantt-container {
   flex: 1;
   padding: 20px;
-  background: #f9f9f9;
+  background: white;
+  border-radius: 0 0 8px 8px;
 }
 
 .empty-state {
   text-align: center;
   padding: 40px;
   grid-column: 1 / -1;
+  background: white;
+  border-radius: 8px;
 }
 
 .modal {
@@ -363,10 +375,13 @@ async function updateProjectTasks(tasks: Task[]) {
   padding: 40px;
   background: white;
   border-radius: 8px;
-  margin: 20px;
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 20px;
+  }
+
   .project-tiles {
     grid-template-columns: 1fr;
   }
