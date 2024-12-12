@@ -159,7 +159,19 @@ const drawChart = () => {
     .append('svg')
     .attr('width', totalWidth + margin.left + margin.right)
     .attr('height', height + margin.top + margin.bottom)
-    .append('g')
+
+  // Create a clip path to ensure grid lines don't extend beyond the chart area
+  svg.append('defs')
+    .append('clipPath')
+    .attr('id', 'chart-area')
+    .append('rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('width', totalWidth)
+    .attr('height', height)
+
+  // Create main chart group
+  const mainGroup = svg.append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`)
 
   // Create scales
@@ -184,7 +196,7 @@ const drawChart = () => {
     .ticks(props.tasks.length)
 
   // Add x-axis with rotated labels
-  const xAxisGroup = svg.append('g')
+  const xAxisGroup = mainGroup.append('g')
     .attr('class', 'x-axis')
     .call(xAxis)
 
@@ -196,13 +208,14 @@ const drawChart = () => {
     .attr('transform', 'rotate(-45)')
 
   // Add y-axis
-  svg.append('g')
+  mainGroup.append('g')
     .attr('class', 'y-axis')
     .call(yAxis)
 
-  // Add vertical grid lines
-  svg.append('g')
+  // Add vertical grid lines with clip path
+  mainGroup.append('g')
     .attr('class', 'grid')
+    .attr('clip-path', 'url(#chart-area)')
     .selectAll('line')
     .data(ticks)
     .enter()
@@ -211,11 +224,11 @@ const drawChart = () => {
     .attr('x2', d => timeScale(d))
     .attr('y1', 0)
     .attr('y2', height)
-    .attr('stroke', '#f0f0f0')
+    .attr('stroke', '#E0E0E0')
     .attr('stroke-width', 1)
 
   // Add bars
-  svg.selectAll('.task-bar')
+  mainGroup.selectAll('.task-bar')
     .data(props.tasks)
     .enter()
     .append('rect')
@@ -233,7 +246,7 @@ const drawChart = () => {
     .attr('ry', 3)
 
   // Add progress indicators
-  svg.selectAll('.progress')
+  mainGroup.selectAll('.progress')
     .data(props.tasks)
     .enter()
     .append('rect')
@@ -251,17 +264,17 @@ const drawChart = () => {
     .attr('ry', 3)
 
   // Add responsibility labels with dynamic font size
-  svg.selectAll('.responsibility')
+  mainGroup.selectAll('.responsibility')
     .data(props.tasks)
     .enter()
     .append('text')
     .attr('class', 'responsibility')
     .attr('x', d => timeScale(new Date(d.Start_date)) + 5)
     .attr('y', d => (taskScale(d.Task) || 0) + taskScale.bandwidth() / 2)
-    .attr('dy', '0.35em')
+    .attr('dy', '0.5em')
     .text(d => d.Responsibility)
-    .attr('fill', 'brown')
-    .attr('font-size', `${Math.min(taskScale.bandwidth() * 0.4, 12)}px`)
+    .attr('fill', 'black')
+    .attr('font-size', `${Math.min(taskScale.bandwidth() * 0.6, 12)}px`)
 }
 
 // Debounce function for resize handling
@@ -304,33 +317,29 @@ onUnmounted(() => {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 20px;
-  /* Smooth scrolling for better UX */
   scroll-behavior: smooth;
-  /* Show scrollbar only when needed */
   scrollbar-width: thin;
-  scrollbar-color: #2196F3 #f0f0f0;
-  /* Prevent content from expanding container */
+  scrollbar-color: #3F51B5 #E0E0E0;
   max-width: 100%;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Custom scrollbar styling for webkit browsers */
 .gantt-chart::-webkit-scrollbar {
   height: 8px;
 }
 
 .gantt-chart::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: #E0E0E0;
   border-radius: 4px;
 }
 
 .gantt-chart::-webkit-scrollbar-thumb {
-  background: #2196F3;
+  background: #3F51B5;
   border-radius: 4px;
 }
 
 .gantt-chart::-webkit-scrollbar-thumb:hover {
-  background: #1976D2;
+  background: #303F9F;
 }
 
 .download-buttons {
@@ -342,35 +351,37 @@ onUnmounted(() => {
 
 .download-buttons button {
   padding: 0.5rem 1rem;
-  background-color: #2196F3;
+  background-color: #3F51B5;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
   min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .download-buttons button:hover {
-  background-color: #1976D2;
+  background-color: #303F9F;
 }
 
 :deep(.x-axis), :deep(.y-axis) {
   font-size: 12px;
+  color: #757575;
 }
 
 :deep(.x-axis) line,
 :deep(.y-axis) line {
-  stroke: #ddd;
+  stroke: #E0E0E0;
 }
 
 :deep(.x-axis) path,
 :deep(.y-axis) path {
-  stroke: #ddd;
+  stroke: #E0E0E0;
 }
 
 :deep(.task-bar) {
-  opacity: 0.8;
+  opacity: 0.9;
   transition: opacity 0.2s;
 }
 
@@ -381,17 +392,18 @@ onUnmounted(() => {
 :deep(.y-axis text) {
   text-anchor: end;
   font-size: 12px;
+  fill: #757575;
 }
 
 :deep(.x-axis text) {
   font-weight: 500;
+  fill: #757575;
 }
 
 :deep(.grid line) {
   stroke-dasharray: 2,2;
 }
 
-/* Responsive styles */
 @media (max-width: 768px) {
   .download-buttons {
     flex-direction: column;
@@ -411,7 +423,6 @@ onUnmounted(() => {
   }
 }
 
-/* Remove responsive SVG width to allow horizontal scrolling */
 :deep(svg) {
   height: auto;
 }

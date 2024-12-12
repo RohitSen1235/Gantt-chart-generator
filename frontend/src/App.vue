@@ -191,7 +191,7 @@ async function updateProjectTasks(tasks: Task[]) {
 <style>
 .app {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #F3F4F8;
 }
 
 .container {
@@ -208,6 +208,11 @@ async function updateProjectTasks(tasks: Task[]) {
   margin-bottom: 20px;
 }
 
+.main-header h1 {
+  color: #1F2937;
+  font-weight: 600;
+}
+
 .projects-grid {
   padding: 20px 0;
 }
@@ -220,41 +225,44 @@ async function updateProjectTasks(tasks: Task[]) {
 
 .project-tile {
   background: white;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 20px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 24px;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .project-tile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
 }
 
 .project-tile-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .project-tile-header h3 {
   margin: 0;
-  color: #333;
+  color: #1F2937;
+  font-weight: 600;
 }
 
 .project-tile p {
   margin: 0 0 15px 0;
-  color: #666;
-  font-size: 0.9em;
+  color: #4B5563;
+  font-size: 0.95em;
+  line-height: 1.5;
 }
 
 .project-stats {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #888;
+  color: #6B7280;
   font-size: 0.9em;
 }
 
@@ -267,15 +275,15 @@ async function updateProjectTasks(tasks: Task[]) {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   opacity: 0.7;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-icon:hover {
   opacity: 1;
-  background: #f0f0f0;
+  background: #F3F4F8;
 }
 
 .project-detail-view {
@@ -283,20 +291,20 @@ async function updateProjectTasks(tasks: Task[]) {
   display: flex;
   flex-direction: column;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin: 20px 0;
 }
 
 .detail-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+  padding: 24px;
+  border-bottom: 1px solid #E5E7EB;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   background: white;
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .btn-back {
@@ -305,14 +313,17 @@ async function updateProjectTasks(tasks: Task[]) {
   padding: 8px 16px;
   cursor: pointer;
   font-size: 1em;
-  color: #666;
+  color: #4B5563;
   display: flex;
   align-items: center;
   gap: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
 }
 
 .btn-back:hover {
-  color: #333;
+  color: #1F2937;
+  background: #F3F4F8;
 }
 
 .project-title {
@@ -320,27 +331,41 @@ async function updateProjectTasks(tasks: Task[]) {
 }
 
 .project-title h2 {
-  margin: 0 0 5px 0;
+  margin: 0 0 6px 0;
+  color: #1F2937;
+  font-weight: 600;
 }
 
 .project-title p {
   margin: 0;
-  color: #666;
+  color: #4B5563;
+  font-size: 0.95em;
 }
 
 .gantt-container {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   background: white;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 12px 12px;
 }
 
 .empty-state {
   text-align: center;
-  padding: 40px;
+  padding: 48px;
   grid-column: 1 / -1;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+}
+
+.empty-state h2 {
+  color: #1F2937;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  color: #4B5563;
+  margin-bottom: 24px;
 }
 
 .modal {
@@ -349,41 +374,52 @@ async function updateProjectTasks(tasks: Task[]) {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(17, 24, 39, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   max-height: 90vh;
   overflow-y: auto;
   width: 90%;
   max-width: 800px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .btn-primary {
-  background: #007bff;
+  background: #6366F1;
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 10px 20px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.15);
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+  background: #4F46E5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
 .no-tasks {
   text-align: center;
-  padding: 40px;
+  padding: 48px;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
+}
+
+.no-tasks p {
+  color: #4B5563;
+  margin-bottom: 20px;
 }
 
 @media (max-width: 768px) {
@@ -397,7 +433,7 @@ async function updateProjectTasks(tasks: Task[]) {
   
   .detail-header {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
     text-align: center;
   }
   

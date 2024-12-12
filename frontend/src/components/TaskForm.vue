@@ -9,6 +9,7 @@
           id="task" 
           v-model="task.Task" 
           required
+          class="form-control"
         >
       </div>
 
@@ -19,6 +20,7 @@
           id="responsibility" 
           v-model="task.Responsibility" 
           required
+          class="form-control"
         >
       </div>
 
@@ -29,6 +31,7 @@
           id="startDate" 
           v-model="task.Start_date" 
           required
+          class="form-control"
         >
       </div>
 
@@ -39,6 +42,7 @@
           id="endDate" 
           v-model="task.End_Date" 
           required
+          class="form-control"
         >
       </div>
 
@@ -51,10 +55,11 @@
           min="0"
           max="100"
           required
+          class="form-control progress-input"
         >
       </div>
 
-      <button type="submit" class="submit-btn">Add Task</button>
+      <button type="submit" class="btn-primary">Add Task</button>
     </form>
   </div>
 </template>
@@ -97,44 +102,76 @@ const submitTask = () => {
 .task-form {
   max-width: 500px;
   margin: 0 auto;
-  padding: 20px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
+  padding: 24px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E5E7EB;
+}
+
+.task-form h2 {
+  color: #1F2937;
+  margin-bottom: 24px;
+  font-weight: 600;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.95em;
 }
 
-input {
+.form-control {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
+  padding: 10px;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  font-size: 0.95em;
+  background: #F9FAFB;
+  color: #1F2937;
+  transition: all 0.2s;
 }
 
-input[type="number"] {
-  width: 100px;
+.form-control:focus {
+  outline: none;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: white;
 }
 
-.submit-btn {
-  background-color: #4CAF50;
+.progress-input {
+  width: 120px;
+}
+
+.btn-primary {
+  background: #6366F1;
   color: white;
-  padding: 10px 20px;
+  padding: 10px 24px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-weight: 500;
+  font-size: 0.95em;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.15);
 }
 
-.submit-btn:hover {
-  background-color: #45a049;
+.btn-primary:hover {
+  background: #4F46E5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+@media (max-width: 768px) {
+  .task-form {
+    padding: 16px;
+    margin: 0 16px;
+  }
 }
 </style>
