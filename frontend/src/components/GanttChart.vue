@@ -147,7 +147,7 @@ const drawChart = () => {
   const paddedEndDate = new Date(timeExtent[1].getTime() + timePadding)
 
   // Calculate dynamic height based on number of tasks
-  const minHeightPerTask = 30
+  const minHeightPerTask = 40
   const height = Math.max(props.tasks.length * minHeightPerTask, 200)
 
   // Create responsive SVG
