@@ -15,13 +15,15 @@
             class="project-tile"
             @click="selectProject(project)"
           >
-            <h3>{{ project.name }}</h3>
+            <div class="project-tile-header">
+              <h3>{{ project.name }}</h3>
+              <button @click.stop="deleteProject(project.id)" class="btn-icon" title="Delete Project">🗑️</button>
+            </div>
             <p>{{ project.description }}</p>
             <div class="project-stats">
               <span>Tasks: {{ project.tasks.length }}</span>
               <div class="project-actions">
                 <button @click.stop="editProject(project)" class="btn-icon" title="Edit Project">✏️</button>
-                <button @click.stop="deleteProject(project.id)" class="btn-icon" title="Delete Project">🗑️</button>
               </div>
             </div>
           </div>
@@ -230,8 +232,15 @@ async function updateProjectTasks(tasks: Task[]) {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.project-tile h3 {
-  margin: 0 0 10px 0;
+.project-tile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.project-tile-header h3 {
+  margin: 0;
   color: #333;
 }
 
