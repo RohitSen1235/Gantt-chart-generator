@@ -28,6 +28,9 @@
           <div class="task-header" @click="toggleTask(index)">
             <div class="task-summary">
               <h5>Task {{ index + 1 }}: {{ task.Task }}</h5>
+              <span class="task-info">
+                {{ task.subtasks.length }} subtask{{ task.subtasks.length !== 1 ? 's' : '' }}
+              </span>
               <span class="expand-icon">{{ expandedTasks[index] ? '▼' : '▶' }}</span>
             </div>
             <button type="button" @click.stop="removeTask(index)" class="btn-remove">×</button>
@@ -63,6 +66,7 @@
                   v-model="task.Start_date"
                   required
                   class="form-control"
+                  :disabled="task.subtasks.length > 0"
                 />
               </div>
 
@@ -74,6 +78,7 @@
                   v-model="task.End_Date"
                   required
                   class="form-control"
+                  :disabled="task.subtasks.length > 0"
                 />
               </div>
 
@@ -86,8 +91,28 @@
                   min="0"
                   max="100"
                   class="form-control"
+                  :disabled="task.subtasks.length > 0"
                 />
               </div>
+            </div>
+
+            <!-- Subtasks Section -->
+            <div class="subtasks-section">
+              <h5>Subtasks</h5>
+              <div v-if="task.subtasks.length > 0" class="subtasks-list">
+                <div v-for="(subtask, subtaskIndex) in task.subtasks" :key="subtaskIndex" class="subtask-item">
+                  <div class="subtask-header">
+                    <span>{{ subtask.Task }}</span>
+                    <button type="button" @click="removeSubtask(index, subtaskIndex)" class="btn-remove-subtask">×</button>
+                  </div>
+                  <div class="subtask-details">
+                    <span>{{ subtask.Responsibility }}</span>
+                    <span>{{ formatDate(subtask.Start_date) }} - {{ formatDate(subtask.End_Date) }}</span>
+                    <span>Progress: {{ subtask.progress }}%</span>
+                  </div>
+                </div>
+              </div>
+              <button type="button" @click="addSubtask(index)" class="btn-add-subtask">Add Subtask</button>
             </div>
           </div>
         </div>
@@ -100,12 +125,24 @@
         <button type="button" @click="$emit('cancel')" class="btn-secondary">Cancel</button>
       </div>
     </form>
+
+    <!-- Task Form Modal -->
+    <div v-if="showTaskForm" class="modal">
+      <div class="modal-content">
+        <TaskForm 
+          :is-subtask="true"
+          @task-added="handleSubtaskAdded"
+          @cancel="showTaskForm = false"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { Project, Task } from '../types'
+import TaskForm from './TaskForm.vue'
 
 const props = defineProps<{
   project: Project | undefined
@@ -124,6 +161,8 @@ const projectData = ref<Project>({
 })
 
 const expandedTasks = ref<{ [key: number]: boolean }>({})
+const showTaskForm = ref(false)
+const activeTaskIndex = ref<number | null>(null)
 
 onMounted(() => {
   if (props.project) {
@@ -136,19 +175,46 @@ onMounted(() => {
   }
 })
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString()
+}
+
 const toggleTask = (index: number) => {
   expandedTasks.value[index] = !expandedTasks.value[index]
+}
+
+const updateTaskDates = (taskIndex: number) => {
+  const task = projectData.value.tasks[taskIndex]
+  if (task.subtasks.length === 0) return
+
+  // Find earliest start date and latest end date among subtasks
+  const startDates = task.subtasks.map(subtask => new Date(subtask.Start_date).getTime())
+  const endDates = task.subtasks.map(subtask => new Date(subtask.End_Date).getTime())
+
+  const earliestStart = new Date(Math.min(...startDates))
+  const latestEnd = new Date(Math.max(...endDates))
+
+  // Update parent task dates
+  task.Start_date = earliestStart.toISOString().split('T')[0]
+  task.End_Date = latestEnd.toISOString().split('T')[0]
+
+  // Update progress based on subtasks
+  const totalProgress = task.subtasks.reduce((sum, subtask) => sum + subtask.progress, 0)
+  task.progress = Math.round(totalProgress / task.subtasks.length)
 }
 
 const addTask = () => {
   const newIndex = projectData.value.tasks.length
   projectData.value.tasks.push({
+    id: Date.now(),
     Task: '',
     Responsibility: '',
     Start_date: '',
     End_Date: '',
     progress: 0,
-    dependencies: []
+    subtasks: [],
+    is_subtask: false
   })
   // Auto-expand newly added task
   expandedTasks.value[newIndex] = true
@@ -162,6 +228,33 @@ const removeTask = (index: number) => {
   for (let i = index; i < projectData.value.tasks.length; i++) {
     expandedTasks.value[i] = expandedTasks.value[i + 1]
   }
+}
+
+const addSubtask = (taskIndex: number) => {
+  activeTaskIndex.value = taskIndex
+  showTaskForm.value = true
+}
+
+const handleSubtaskAdded = (subtask: Task) => {
+  if (activeTaskIndex.value === null) return
+
+  const taskIndex = activeTaskIndex.value
+  const parentTask = projectData.value.tasks[taskIndex]
+
+  parentTask.subtasks.push({
+    ...subtask,
+    parent_id: parentTask.id,
+    is_subtask: true
+  })
+
+  updateTaskDates(taskIndex)
+  showTaskForm.value = false
+  activeTaskIndex.value = null
+}
+
+const removeSubtask = (taskIndex: number, subtaskIndex: number) => {
+  projectData.value.tasks[taskIndex].subtasks.splice(subtaskIndex, 1)
+  updateTaskDates(taskIndex)
 }
 
 const handleSubmit = () => {
@@ -209,6 +302,12 @@ const handleSubmit = () => {
   border-color: #6366F1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   background: white;
+}
+
+.form-control:disabled {
+  background: #F3F4F6;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .form-row {
@@ -263,6 +362,11 @@ const handleSubmit = () => {
   font-weight: 500;
 }
 
+.task-info {
+  color: #6B7280;
+  font-size: 0.9em;
+}
+
 .expand-icon {
   color: #6B7280;
   font-size: 0.8em;
@@ -273,7 +377,35 @@ const handleSubmit = () => {
   border-top: 1px solid #E5E7EB;
 }
 
-.btn-remove {
+.subtasks-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 6px;
+}
+
+.subtasks-section h5 {
+  color: #374151;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.subtask-item {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.subtask-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-remove, .btn-remove-subtask {
   background: #EF4444;
   color: white;
   border: none;
@@ -288,12 +420,18 @@ const handleSubmit = () => {
   transition: all 0.2s;
 }
 
-.btn-remove:hover {
+.btn-remove-subtask {
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+}
+
+.btn-remove:hover, .btn-remove-subtask:hover {
   background: #DC2626;
   transform: scale(1.05);
 }
 
-.btn-add {
+.btn-add, .btn-add-subtask {
   background: #10B981;
   color: white;
   border: none;
@@ -306,10 +444,21 @@ const handleSubmit = () => {
   box-shadow: 0 1px 2px rgba(16, 185, 129, 0.1);
 }
 
+.btn-add-subtask {
+  background: #6366F1;
+  font-size: 0.9em;
+  padding: 8px 16px;
+}
+
 .btn-add:hover {
   background: #059669;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.btn-add-subtask:hover {
+  background: #4F46E5;
+  transform: translateY(-1px);
 }
 
 .form-actions {
@@ -360,6 +509,28 @@ textarea.form-control {
 
 .task-header:hover {
   background-color: #F3F4F8;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {

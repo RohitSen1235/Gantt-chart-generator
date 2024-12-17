@@ -1,93 +1,29 @@
 <template>
-  <div class="chart-wrapper">
-    <div class="download-buttons">
-      <button @click="downloadSVG">Download SVG</button>
-      <button @click="downloadJPEG">Download JPEG</button>
+  <div class="subtask-gantt">
+    <div class="subtask-header">
+      <h3>{{ parentTask.Task }} - Subtasks</h3>
+      <button @click="$emit('close')" class="close-btn">×</button>
     </div>
-    <div ref="chartContainer" class="gantt-chart"></div>
-
-    <!-- Subtask Modal -->
-    <div v-if="selectedTask" class="modal" @click.self="selectedTask = null">
-      <div class="modal-content">
-        <SubtaskGanttChart 
-          :parent-task="selectedTask" 
-          @close="selectedTask = null"
-        />
-      </div>
+    <div class="chart-container">
+      <div ref="chartContainer" class="gantt-chart"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import * as d3 from 'd3'
 import type { Task } from '../types'
-import SubtaskGanttChart from './SubtaskGanttChart.vue'
 
 const props = defineProps<{
-  tasks: Task[]
+  parentTask: Task
+}>()
+
+defineEmits<{
+  (e: 'close'): void
 }>()
 
 const chartContainer = ref<HTMLElement | null>(null)
-const selectedTask = ref<Task | null>(null)
-
-// Filter out subtasks for main view
-const mainTasks = computed(() => 
-  props.tasks.filter(task => !task.is_subtask)
-)
-
-const downloadSVG = () => {
-  const svgElement = chartContainer.value?.querySelector('svg')
-  if (!svgElement) return
-
-  const svgCopy = svgElement.cloneNode(true) as SVGElement
-  svgCopy.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-  
-  const svgString = new XMLSerializer().serializeToString(svgCopy)
-  
-  const downloadLink = document.createElement('a')
-  downloadLink.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString)
-  downloadLink.download = 'gantt-chart.svg'
-  
-  document.body.appendChild(downloadLink)
-  downloadLink.click()
-  document.body.removeChild(downloadLink)
-}
-
-const downloadJPEG = () => {
-  const svgElement = chartContainer.value?.querySelector('svg')
-  if (!svgElement) return
-
-  const canvas = document.createElement('canvas')
-  const svgRect = svgElement.getBoundingClientRect()
-  canvas.width = svgRect.width
-  canvas.height = svgRect.height
-
-  const svgString = new XMLSerializer().serializeToString(svgElement)
-  const svg = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
-  const url = URL.createObjectURL(svg)
-
-  const img = new Image()
-  img.onload = () => {
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0)
-
-    const jpegUrl = canvas.toDataURL('image/jpeg', 1.0)
-    const downloadLink = document.createElement('a')
-    downloadLink.href = jpegUrl
-    downloadLink.download = 'gantt-chart.jpg'
-    document.body.appendChild(downloadLink)
-    downloadLink.click()
-    document.body.removeChild(downloadLink)
-
-    URL.revokeObjectURL(url)
-  }
-  img.src = url
-}
 
 const getNextMonday = (date: Date): Date => {
   const result = new Date(date)
@@ -124,7 +60,7 @@ const generateTicks = (start: Date, end: Date): Date[] => {
   return ticks
 }
 
-const calculateTextWidth = (text: string, fontSize: number = 12): number => {
+const calculateTextWidth = (text: string, fontSize: number = 14.4): number => {
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d')
   if (!context) return 0
@@ -145,41 +81,33 @@ const calculateLeftMargin = (tasks: Task[]): number => {
   return Math.max(Math.ceil(textWidth) + 100, 200) // Increased minimum margin and padding
 }
 
-
 const drawChart = () => {
-  if (!chartContainer.value || !mainTasks.value.length) return
+  if (!chartContainer.value || !props.parentTask.subtasks.length) return
 
   // Clear previous chart
   d3.select(chartContainer.value).selectAll('*').remove()
 
-  const tasks = mainTasks.value
+  const tasks = props.parentTask.subtasks
   const leftMargin = calculateLeftMargin(tasks)
   
   const margin = { 
     top: 60, 
     right: 40, 
-    bottom: 40, 
+    bottom: 20, 
     left: leftMargin 
   }
-
-  // Calculate time extent with type safety
-  const dates = tasks.flatMap(task => [new Date(task.Start_date), new Date(task.End_Date)])
-  const timeExtent: [Date, Date] = [
-    new Date(Math.min(...dates.map(d => d.getTime()))),
-    new Date(Math.max(...dates.map(d => d.getTime())))
-  ]
   
-  // Start from Monday of the first task's week
-  const startDate = getPreviousMonday(timeExtent[0])
-  const endDate = getNextMonday(timeExtent[1])
+  // Use parent task dates as boundaries
+  const startDate = getPreviousMonday(new Date(props.parentTask.Start_date))
+  const endDate = getNextMonday(new Date(props.parentTask.End_Date))
   
   const weekInMillis = 7 * 24 * 60 * 60 * 1000
   const totalWeeks = Math.ceil((endDate.getTime() - startDate.getTime()) / weekInMillis)
-  const minWidthPerWeek = 60
+  const minWidthPerWeek = 80
   const totalWidth = totalWeeks * minWidthPerWeek
   
   const minHeightPerTask = 40
-  const height = Math.max(tasks.length * minHeightPerTask, 360)
+  const height = Math.max(tasks.length * minHeightPerTask, 120)
 
   const svg = d3.select(chartContainer.value)
     .append('svg')
@@ -246,6 +174,12 @@ const drawChart = () => {
     .attr('class', 'y-axis')
     .call(yAxis)
 
+  // Use a different color scheme for subtasks
+  const subtaskColors = {
+    bar: '#FF9800',
+    progress: '#F57C00'
+  }
+
   // Draw task bars
   tasks.forEach((task: Task) => {
     const barGroup = chartGroup.append('g')
@@ -258,29 +192,21 @@ const drawChart = () => {
       .attr('y', taskScale(task.Task)!)
       .attr('width', timeScale(new Date(task.End_Date)) - timeScale(new Date(task.Start_date)))
       .attr('height', taskScale.bandwidth())
-      .attr('fill', '#2196F3')
+      .attr('fill', subtaskColors.bar)
       .attr('rx', 3)
       .attr('ry', 3)
       .style('opacity', 0.9)
-      .style('cursor', task.subtasks.length ? 'pointer' : 'default')
 
-    // Progress bar with click handler for tasks with subtasks
-    const progressBar = barGroup.append('rect')
+    // Progress bar
+    barGroup.append('rect')
       .attr('class', 'progress')
       .attr('x', timeScale(new Date(task.Start_date)))
       .attr('y', taskScale(task.Task)!)
       .attr('width', (timeScale(new Date(task.End_Date)) - timeScale(new Date(task.Start_date))) * (task.progress / 100))
       .attr('height', taskScale.bandwidth())
-      .attr('fill', '#4CAF50')
+      .attr('fill', subtaskColors.progress)
       .attr('rx', 3)
       .attr('ry', 3)
-      .style('cursor', task.subtasks.length ? 'pointer' : 'default')
-
-    if (task.subtasks.length) {
-      progressBar.on('click', () => {
-        selectedTask.value = task
-      })
-    }
 
     // Task label
     barGroup.append('text')
@@ -291,63 +217,82 @@ const drawChart = () => {
       .text(task.Responsibility)
       .attr('fill', 'white')
       .attr('font-size', '14.4px')
-
-    // Subtask indicator
-    if (task.subtasks.length) {
-      barGroup.append('text')
-        .attr('class', 'subtask-indicator')
-        .attr('x', timeScale(new Date(task.End_Date)) + 8)
-        .attr('y', taskScale(task.Task)! + taskScale.bandwidth() / 2)
-        .attr('dy', '0.35em')
-        .text(`(${task.subtasks.length} subtasks)`)
-        .attr('fill', '#6B7280')
-        .attr('font-size', '14.4px')
-    }
   })
-}
-
-// Debounce function for resize handling
-const debounce = (fn: Function, ms = 300) => {
-  let timeoutId: ReturnType<typeof setTimeout>
-  return function (this: any, ...args: any[]) {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => fn.apply(this, args), ms)
-  }
 }
 
 onMounted(() => {
   drawChart()
-  const debouncedDrawChart = debounce(drawChart)
-  window.addEventListener('resize', debouncedDrawChart)
 })
 
-watch(() => props.tasks, () => {
+watch(() => props.parentTask, () => {
   drawChart()
 }, { deep: true })
-
-onUnmounted(() => {
-  window.removeEventListener('resize', drawChart)
-})
 </script>
 
 <style scoped>
-.chart-wrapper {
-  width: 100%;
-  max-width: 100%;
+.subtask-gantt {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.subtask-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
+}
+
+.subtask-header h3 {
+  margin: 0;
+  color: #1F2937;
+  font-weight: 600;
+  font-size: 18px;
+  /* Add text wrapping for long task names in header */
+  max-width: calc(100% - 40px);
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6B7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  color: #1F2937;
+  background: #F3F4F6;
+}
+
+.chart-container {
+  flex: 1;
+  overflow: hidden;
   position: relative;
-  margin: 0 auto;
+  padding: 20px;
 }
 
 .gantt-chart {
   width: 100%;
-  min-height: 400px;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 20px;
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #3F51B5 #E0E0E0;
-  max-width: 100%;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -369,68 +314,21 @@ onUnmounted(() => {
   background: #303F9F;
 }
 
-.download-buttons {
-  margin-bottom: 1rem;
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.download-buttons button {
-  padding: 0.5rem 1rem;
-  background-color: #3F51B5;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  min-width: 120px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.download-buttons button:hover {
-  background-color: #303F9F;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
-  overflow: auto;
-}
-
 :deep(.x-axis), :deep(.y-axis) {
   font-size: 14.4px;
-  color: #757575;
+  color: #6B7280;
 }
 
 :deep(.x-axis text) {
   font-weight: 700;
-  fill: #757575;
+  fill: #6B7280;
 }
 
 :deep(.y-axis text) {
   text-anchor: end;
   font-weight: 700;
-  fill: #757575;
+  fill: #6B7280;
   dominant-baseline: middle;
-
   font-size: 14.4px !important;
   /* Add text wrapping for long task names */
   inline-size: 180px;
@@ -439,7 +337,6 @@ onUnmounted(() => {
 }
 
 :deep(.task-bar) {
-  opacity: 0.9;
   transition: opacity 0.2s;
 }
 
@@ -448,11 +345,7 @@ onUnmounted(() => {
 }
 
 :deep(.task-label) {
-  font-size: 14.4px !important; /* Increased by 20% from 12px */
-}
-
-:deep(.subtask-indicator) {
-  font-size: 14.4px !important; /* Increased by 20% from 12px */
+  font-size: 14.4px !important;
 }
 
 :deep(.grid line) {
@@ -460,25 +353,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .download-buttons {
-    flex-direction: column;
-    align-items: stretch;
-}
-
-  .download-buttons button {
-    width: 100%;
-  }
-
   :deep(.x-axis text) {
-    font-size: 12px; /* Increased by 20% from 10px */
+    font-size: 12px;
   }
 
   :deep(.y-axis text) {
-    font-size: 12px; /* Increased by 20% from 10px */
+    font-size: 12px;
   }
-}
-
-:deep(svg) {
-  height: auto;
 }
 </style>

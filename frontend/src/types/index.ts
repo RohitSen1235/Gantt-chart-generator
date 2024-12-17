@@ -6,6 +6,9 @@ export interface Task {
   End_Date: string
   progress: number
   dependencies?: number[]
+  parent_id?: number
+  subtasks: Task[]
+  is_subtask: boolean
 }
 
 export interface Project {
