@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: gantt-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - gantt-network
+
+  frontend:
+    build: ./frontend
+    container_name: gantt-frontend
+    ports:
+      - "5137:5137"
+    depends_on:
+      - backend
+    networks:
+      - gantt-network
+
+networks:
+  gantt-network:
+    driver: bridge
+
+volumes:
+  data:
