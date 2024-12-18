@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Project Status Report</title>
+  <script src="https://d3js.org/d3.v7.8.5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .project-header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .project-header h1 {
+      margin: 0 0 20px 0;
+      color: #2196F3;
+      font-size: 32px;
+    }
+    .project-description {
+      background-color: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+      line-height: 1.6;
+      font-size: 16px;
+      color: #555;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    #chart-container {
+      width: 100%;
+      overflow-x: auto;
+      background-color: #ffffff;
+      margin-bottom: 40px;
+    }
+    .subtask-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .subtask-section h3 {
+      color: #2196F3;
+      margin: 0 0 15px 0;
+    }
+    .subtask-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .subtask-item {
+      padding: 15px;
+      margin-bottom: 10px;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .subtask-item h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .subtask-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    .progress-bar {
+      height: 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #4CAF50;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="project-header">
+    <h1>PROJECT_NAME</h1>
+    <div class="project-description">PROJECT_DESCRIPTION</div>
+  </div>
+
+  <div id="chart-container">
+    MAIN_CHART_SVG
+  </div>
+
+  <div id="subtasks-container"></div>
+
+  <script>
+    const tasks = TASKS_DATA;
+    
+    function createSubtaskSections() {
+      const container = document.getElementById('subtasks-container');
+      
+      tasks.forEach(task => {
+        if (task.subtasks && task.subtasks.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'subtask-section';
+          
+          section.innerHTML = `
+            <h3>Subtasks for: ${task.Task}</h3>
+            <div class="subtask-list">
+              ${task.subtasks.map(subtask => `
+                <div class="subtask-item">
+                  <h4>${subtask.Task}</h4>
+                  <div class="subtask-details">
+                    <div>Assigned: ${subtask.Responsibility}</div>
+                    <div>Start: ${new Date(subtask.Start_date).toLocaleDateString()}</div>
+                    <div>End: ${new Date(subtask.End_Date).toLocaleDateString()}</div>
+                    <div>Progress: ${subtask.progress}%</div>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width: ${subtask.progress}%"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+          
+          container.appendChild(section);
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', createSubtaskSections);
+  </script>
+</body>
+</html>

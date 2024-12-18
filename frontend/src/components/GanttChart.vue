@@ -252,7 +252,7 @@ const drawChart = () => {
       .attr('class', 'task-group')
 
     // Main task bar
-    barGroup.append('rect')
+    const mainBar = barGroup.append('rect')
       .attr('class', 'task-bar')
       .attr('x', timeScale(new Date(task.Start_date)))
       .attr('y', taskScale(task.Task)!)
@@ -263,6 +263,13 @@ const drawChart = () => {
       .attr('ry', 3)
       .style('opacity', 0.9)
       .style('cursor', task.subtasks.length ? 'pointer' : 'default')
+
+    // Add click handler to main bar if task has subtasks
+    if (task.subtasks.length) {
+      mainBar.on('click', () => {
+        selectedTask.value = task
+      })
+    }
 
     // Progress bar with click handler for tasks with subtasks
     const progressBar = barGroup.append('rect')

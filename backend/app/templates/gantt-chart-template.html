@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Project Status Report</title>
+  <script src="https://d3js.org/d3.v7.8.5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .project-header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .project-header h1 {
+      margin: 0 0 20px 0;
+      color: #2196F3;
+      font-size: 32px;
+    }
+    .project-description {
+      background-color: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+      line-height: 1.6;
+      font-size: 16px;
+      color: #555;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    #chart-container {
+      width: 100%;
+      overflow-x: auto;
+      background-color: #ffffff;
+      margin-bottom: 40px;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .subtask-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .subtask-section h3 {
+      color: #2196F3;
+      margin: 0 0 15px 0;
+    }
+    .subtask-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .subtask-item {
+      padding: 15px;
+      margin-bottom: 10px;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .subtask-item h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .subtask-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    .progress-bar {
+      height: 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #4CAF50;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .x-axis text {
+      font-size: 14.4px;
+      font-weight: 700;
+      fill: #757575;
+    }
+    .y-axis text {
+      text-anchor: end;
+      font-weight: 700;
+      fill: #757575;
+      dominant-baseline: middle;
+      font-size: 14.4px !important;
+      inline-size: 180px;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .task-bar {
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+    .task-bar:hover {
+      opacity: 1;
+    }
+    .task-label {
+      font-size: 14.4px !important;
+    }
+    .subtask-indicator {
+      font-size: 14.4px !important;
+    }
+    .grid line {
+      stroke-dasharray: 2,2;
+    }
+  </style>
+</head>
+<body>
+  <div class="project-header">
+    <h1>PROJECT_NAME</h1>
+    <div class="project-description">PROJECT_DESCRIPTION</div>
+  </div>
+
+  <div id="chart-container"></div>
+
+  <div id="subtasks-container"></div>
+
+  <script>
+    // Parse the tasks data
+    const tasksData = 'TASKS_DATA';
+    const tasks = JSON.parse(tasksData.replace(/&quot;/g, '"'));
+    console.log('Tasks data:', tasks);
+
+    function getNextMonday(date) {
+      const result = new Date(date);
+      const day = result.getDay();
+      if (day === 0) { // Sunday
+        result.setDate(result.getDate() + 1);
+      } else if (day > 1) { // Tuesday-Saturday
+        result.setDate(result.getDate() + (8 - day));
+      }
+      return result;
+    }
+
+    function getPreviousMonday(date) {
+      const result = new Date(date);
+      const day = result.getDay();
+      if (day === 0) { // Sunday
+        result.setDate(result.getDate() - 6);
+      } else if (day > 1) { // Tuesday-Saturday
+        result.setDate(result.getDate() - (day - 1));
+      }
+      return result;
+    }
+
+    function generateTicks(start, end) {
+      const ticks = [];
+      const current = new Date(getPreviousMonday(start));
+      while (current <= end) {
+        ticks.push(new Date(current));
+        current.setDate(current.getDate() + 7);
+      }
+      return ticks;
+    }
+
+    function calculateTextWidth(text, fontSize = 12) {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return 0;
+      context.font = `${fontSize}px Arial`;
+      return context.measureText(text).width;
+    }
+
+    function calculateLeftMargin(tasks) {
+      if (!tasks.length) return 150;
+      const longestTask = tasks.reduce((longest, task) => 
+        task.Task.length > longest.length ? task.Task : longest
+      , tasks[0].Task);
+      const textWidth = calculateTextWidth(longestTask, 14.4);
+      return Math.max(Math.ceil(textWidth) + 100, 200);
+    }
+
+    function drawChart() {
+      const container = document.getElementById('chart-container');
+      if (!container || !tasks.length) return;
+
+      // Clear previous chart
+      container.innerHTML = '';
+
+      const leftMargin = calculateLeftMargin(tasks);
+      const margin = { 
+        top: 60, 
+        right: 40, 
+        bottom: 40, 
+        left: leftMargin 
+      };
+
+      // Calculate time extent
+      const dates = tasks.flatMap(task => [new Date(task.Start_date), new Date(task.End_Date)]);
+      const timeExtent = [
+        new Date(Math.min(...dates.map(d => d.getTime()))),
+        new Date(Math.max(...dates.map(d => d.getTime())))
+      ];
+      
+      // Start from Monday of the first task's week
+      const startDate = getPreviousMonday(timeExtent[0]);
+      const endDate = getNextMonday(timeExtent[1]);
+      
+      const weekInMillis = 7 * 24 * 60 * 60 * 1000;
+      const totalWeeks = Math.ceil((endDate.getTime() - startDate.getTime()) / weekInMillis);
+      const minWidthPerWeek = 60;
+      const totalWidth = totalWeeks * minWidthPerWeek;
+      
+      const minHeightPerTask = 40;
+      const height = Math.max(tasks.length * minHeightPerTask, 360);
+
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('width', totalWidth + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+
+      const chartGroup = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      // Add white background
+      chartGroup.append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', totalWidth)
+        .attr('height', height)
+        .attr('fill', 'white');
+
+      const timeScale = d3.scaleTime()
+        .domain([startDate, endDate])
+        .range([0, totalWidth]);
+
+      const taskScale = d3.scaleBand()
+        .domain(tasks.map(d => d.Task))
+        .range([0, height])
+        .padding(0.2);
+
+      const ticks = generateTicks(startDate, endDate);
+
+      // Draw grid lines
+      chartGroup.append('g')
+        .attr('class', 'grid')
+        .selectAll('line')
+        .data(ticks)
+        .enter()
+        .append('line')
+        .attr('x1', d => timeScale(d))
+        .attr('x2', d => timeScale(d))
+        .attr('y1', 0)
+        .attr('y2', height)
+        .attr('stroke', '#E0E0E0')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,2');
+
+      const xAxis = d3.axisTop(timeScale)
+        .tickValues(ticks)
+        .tickFormat(d3.timeFormat("%b %d"));
+
+      const yAxis = d3.axisLeft(taskScale)
+        .ticks(tasks.length);
+
+      // Add axes
+      const xAxisGroup = chartGroup.append('g')
+        .attr('class', 'x-axis')
+        .call(xAxis);
+
+      xAxisGroup.selectAll('text')
+        .style('text-anchor', 'start')
+        .attr('dx', '0.8em')
+        .attr('dy', '-0.5em')
+        .attr('transform', 'rotate(-45)');
+
+      chartGroup.append('g')
+        .attr('class', 'y-axis')
+        .call(yAxis);
+
+      // Draw task bars
+      tasks.forEach(task => {
+        const barGroup = chartGroup.append('g')
+          .attr('class', 'task-group');
+
+        // Main task bar
+        barGroup.append('rect')
+          .attr('class', 'task-bar')
+          .attr('x', timeScale(new Date(task.Start_date)))
+          .attr('y', taskScale(task.Task))
+          .attr('width', timeScale(new Date(task.End_Date)) - timeScale(new Date(task.Start_date)))
+          .attr('height', taskScale.bandwidth())
+          .attr('fill', '#2196F3')
+          .attr('rx', 3)
+          .attr('ry', 3)
+          .style('opacity', 0.9);
+
+        // Progress bar
+        barGroup.append('rect')
+          .attr('class', 'progress')
+          .attr('x', timeScale(new Date(task.Start_date)))
+          .attr('y', taskScale(task.Task))
+          .attr('width', (timeScale(new Date(task.End_Date)) - timeScale(new Date(task.Start_date))) * (task.progress / 100))
+          .attr('height', taskScale.bandwidth())
+          .attr('fill', '#4CAF50')
+          .attr('rx', 3)
+          .attr('ry', 3);
+
+        // Task label
+        barGroup.append('text')
+          .attr('class', 'task-label')
+          .attr('x', timeScale(new Date(task.Start_date)) + 5)
+          .attr('y', taskScale(task.Task) + taskScale.bandwidth() / 2)
+          .attr('dy', '0.35em')
+          .text(task.Responsibility)
+          .attr('fill', 'white')
+          .attr('font-size', '14.4px');
+
+        // Subtask indicator
+        if (task.subtasks && task.subtasks.length) {
+          barGroup.append('text')
+            .attr('class', 'subtask-indicator')
+            .attr('x', timeScale(new Date(task.End_Date)) + 8)
+            .attr('y', taskScale(task.Task) + taskScale.bandwidth() / 2)
+            .attr('dy', '0.35em')
+            .text(`(${task.subtasks.length} subtasks)`)
+            .attr('fill', '#6B7280')
+            .attr('font-size', '14.4px');
+        }
+      });
+    }
+
+    function createSubtaskSections() {
+      const container = document.getElementById('subtasks-container');
+      
+      tasks.forEach(task => {
+        if (task.subtasks && task.subtasks.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'subtask-section';
+          
+          section.innerHTML = `
+            <h3>Subtasks for: ${task.Task}</h3>
+            <div class="subtask-list">
+              ${task.subtasks.map(subtask => `
+                <div class="subtask-item">
+                  <h4>${subtask.Task}</h4>
+                  <div class="subtask-details">
+                    <div>Assigned: ${subtask.Responsibility}</div>
+                    <div>Start: ${new Date(subtask.Start_date).toLocaleDateString()}</div>
+                    <div>End: ${new Date(subtask.End_Date).toLocaleDateString()}</div>
+                    <div>Progress: ${subtask.progress}%</div>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width: ${subtask.progress}%"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+          
+          container.appendChild(section);
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded, drawing chart...');
+      drawChart();
+      createSubtaskSections();
+    });
+  </script>
+</body>
+</html>
